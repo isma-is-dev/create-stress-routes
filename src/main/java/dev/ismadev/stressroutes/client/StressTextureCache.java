@@ -5,6 +5,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import dev.ismadev.stressroutes.StressConfig;
 import dev.ismadev.stressroutes.StressRoutes;
 import dev.ismadev.stressroutes.data.NodeKind;
+import dev.ismadev.stressroutes.data.StressCell;
 import dev.ismadev.stressroutes.data.StressEdge;
 import dev.ismadev.stressroutes.data.StressNode;
 import net.minecraft.client.Minecraft;
@@ -42,9 +43,10 @@ public final class StressTextureCache {
     public void ensure(net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> dimension,
                        StressClientState.DimData data, double factor,
                        boolean showRoutes, boolean showNodes,
-                       StressConfig.LineTheme theme) {
+                       StressConfig.LineTheme theme, boolean heatmap) {
         int newSignature = Objects.hash(dimension, data.geometryHash,
-            Double.hashCode(factor), theme.ordinal(), showRoutes, showNodes);
+            Double.hashCode(factor), theme.ordinal(), showRoutes, showNodes,
+            heatmap, heatmap ? data.heatHash : 0);
         if (built && newSignature == signature) {
             return;
         }
@@ -52,7 +54,11 @@ public final class StressTextureCache {
         built = true;
 
         try {
-            rebuild(data, factor, showRoutes, showNodes, theme);
+            if (heatmap) {
+                rebuildHeat(data, factor);
+            } else {
+                rebuild(data, factor, showRoutes, showNodes, theme);
+            }
         } catch (Throwable t) {
             StressRoutes.LOGGER.error("Failed to rasterise the stress layer; disabling it for this session", t);
             clear();
@@ -95,8 +101,8 @@ public final class StressTextureCache {
         }
         warnedCap = false;
 
-        int main = ABGR32.color(255, routeColor(theme));
-        int halo = ABGR32.color(170, 8, 20, 12);
+        int main = abgr(255, routeColor(theme));
+        int halo = abgr(110, 0x08140C);
 
         if (showRoutes) {
             for (StressEdge edge : data.edges) {
@@ -108,23 +114,63 @@ public final class StressTextureCache {
         }
 
         if (showNodes) {
-            int outline = ABGR32.color(180, 8, 20, 12);
+            // One pixel per gear/shaft: the line already carries the shape, markers just
+            // confirm where the actual blocks are.
+            int nodeColor = abgr(255, routeColor(theme));
             for (StressNode node : data.nodes) {
-                int x = Mth.floor(node.x() / factor);
-                int z = Mth.floor(node.z() / factor);
-                int color = ABGR32.color(255, nodeColor(node.kind()));
-                setPixel(x - 1, z - 1, outline);
-                setPixel(x + 2, z - 1, outline);
-                setPixel(x - 1, z + 2, outline);
-                setPixel(x + 2, z + 2, outline);
-                setPixel(x, z, color);
-                setPixel(x + 1, z, color);
-                setPixel(x, z + 1, color);
-                setPixel(x + 1, z + 1, color);
+                setPixel(Mth.floor(node.x() / factor), Mth.floor(node.z() / factor), nodeColor);
             }
         }
 
         prune();
+    }
+
+    private void rebuildHeat(StressClientState.DimData data, double factor) {
+        for (Tile tile : tiles.values()) {
+            tile.untouched = true;
+        }
+        warnedCap = false;
+
+        int opacity = StressConfig.heatmapOpacity();
+        int alpha = (int) Math.round(255.0D * opacity / 100.0D);
+        int size = Math.max(1, data.cellSize);
+        float max = Math.max(0.0001F, data.maxStress);
+
+        for (StressCell cell : data.cells) {
+            double startX = cell.cellX() * (double) size / factor;
+            double startZ = cell.cellZ() * (double) size / factor;
+            double endX = (cell.cellX() + 1.0D) * size / factor;
+            double endZ = (cell.cellZ() + 1.0D) * size / factor;
+            int color = heatColor(cell.stress() / max, alpha);
+            int x0 = Mth.floor(startX);
+            int z0 = Mth.floor(startZ);
+            int x1 = Math.max(x0 + 1, Mth.ceil(endX));
+            int z1 = Math.max(z0 + 1, Mth.ceil(endZ));
+            for (int x = x0; x < x1; x++) {
+                for (int z = z0; z < z1; z++) {
+                    setPixel(x, z, color);
+                }
+            }
+        }
+
+        prune();
+    }
+
+    /** Green -&gt; yellow -&gt; orange -&gt; red ramp. */
+    private static int heatColor(float ratio, int alpha) {
+        float t = Mth.clamp(ratio, 0.0F, 1.0F);
+        float red;
+        float green;
+        if (t < 0.5F) {
+            float k = t * 2.0F;
+            red = Mth.lerp(k, 60.0F, 245.0F);
+            green = Mth.lerp(k, 210.0F, 225.0F);
+        } else {
+            float k = (t - 0.5F) * 2.0F;
+            red = 245.0F;
+            green = Mth.lerp(k, 225.0F, 60.0F);
+        }
+        return abgr(alpha, (Math.round(red) << 16) | (Math.round(green) << 8) | 60);
     }
 
     private void rasterEdge(StressEdge edge, double factor, int color, boolean halo) {
@@ -151,11 +197,11 @@ public final class StressTextureCache {
             boolean draw = !dashed || (step % 8) < 5;
             if (draw) {
                 if (halo) {
-                    for (int ox = -1; ox <= 1; ox++) {
-                        for (int oz = -1; oz <= 1; oz++) {
-                            setPixel(ix1 + ox, iz1 + oz, color);
-                        }
-                    }
+                    // Four neighbours only: a thin outline instead of a fat 3x3 slab.
+                    setPixel(ix1 - 1, iz1, color);
+                    setPixel(ix1 + 1, iz1, color);
+                    setPixel(ix1, iz1 - 1, color);
+                    setPixel(ix1, iz1 + 1, color);
                 } else {
                     setPixel(ix1, iz1, color);
                 }
@@ -223,20 +269,15 @@ public final class StressTextureCache {
         });
     }
 
+    /** Packs an 0xRRGGBB colour plus alpha into the ABGR layout NativeImage expects. */
+    private static int abgr(int alpha, int rgb) {
+        return ABGR32.fromArgb32((alpha << 24) | (rgb & 0xFFFFFF));
+    }
     private static int routeColor(StressConfig.LineTheme theme) {
         return switch (theme) {
             case AMBER -> 0xE8AA44;
             case TEAL -> 0x2FBFAE;
             default -> 0x3DDC6A;
-        };
-    }
-
-    private static int nodeColor(int kind) {
-        return switch (kind) {
-            case NodeKind.SOURCE -> 0x6BFF9E;
-            case NodeKind.CONSUMER -> 0xC8E85A;
-            case NodeKind.OVERSTRESSED -> 0xFF4D4D;
-            default -> 0x2E8F52;
         };
     }
 

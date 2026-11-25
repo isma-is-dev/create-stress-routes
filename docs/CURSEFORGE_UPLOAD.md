@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Name | `Create: Stress Routes` |
-| Summary | `Plot your Create kinetic network on Xaero's World Map: shafts, cogs, gearboxes and machines as a continuous green flow with live stress load.` |
+| Summary | `Plot your Create kinetic network on Xaero's World Map: shafts, cogs, gearboxes and machines as a continuous green flow, plus a stress heatmap of the busiest zones.` |
 | Category (primary) | `Map and Information` |
 | Additional categories | `Technology` |
 | License | `MIT License` |

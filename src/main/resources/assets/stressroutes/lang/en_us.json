@@ -5,6 +5,12 @@
   "stressroutes.widget.off": "Overlay disabled",
   "stressroutes.widget.hint": "Click to toggle",
 
+  "stressroutes.widget.heat": "Heat",
+  "stressroutes.widget.heat_title": "Stress heatmap",
+  "stressroutes.widget.heat_on": "Heatmap enabled",
+  "stressroutes.widget.heat_off": "Showing the network",
+  "stressroutes.widget.heat_hint": "Click to switch views",
+
   "stressroutes.node.source": "Stress source",
   "stressroutes.node.consumer": "Stress consumer",
   "stressroutes.node.transmission": "Transmission",
@@ -12,6 +18,8 @@
 
   "stressroutes.tooltip.network": "Network: %s / %s SU (%s%%)",
   "stressroutes.tooltip.no_network": "No active kinetic network",
+  "stressroutes.tooltip.heat_title": "Stress heatmap (%sx%s blocks)",
+  "stressroutes.tooltip.heat_cell": "%s SU consumed by %s machine(s)",
 
   "stressroutes.command.stats.header": "Stress Routes — %s tracked kinetic blocks, %s map viewer(s)",
   "stressroutes.command.stats.dimension": "%s: %s blocks, %s links, %s nodes, %s network(s)",

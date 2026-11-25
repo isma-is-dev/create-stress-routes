@@ -6,6 +6,7 @@ import dev.ismadev.stressroutes.StressRoutes;
 import dev.ismadev.stressroutes.data.StressEdge;
 import dev.ismadev.stressroutes.data.StressNode;
 import dev.ismadev.stressroutes.data.StressSnapshot;
+import dev.ismadev.stressroutes.net.S2CStressHeat;
 import dev.ismadev.stressroutes.net.S2CTopologyPart;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
@@ -55,7 +56,7 @@ public final class StressServerEvents {
     private StressServerEvents() {
     }
 
-    private record Request(ResourceKey<Level> dimension, int tick) {
+    private record Request(ResourceKey<Level> dimension, int tick, boolean heatmap) {
     }
 
     private record SentState(ResourceKey<Level> dimension, int hash) {
@@ -118,12 +119,12 @@ public final class StressServerEvents {
     // Streaming
     // ------------------------------------------------------------------
 
-    public static void onRequest(ServerPlayer player, ResourceKey<Level> dimension) {
+    public static void onRequest(ServerPlayer player, ResourceKey<Level> dimension, boolean heatmap) {
         MinecraftServer server = player.getServer();
         if (server == null) {
             return;
         }
-        REQUESTS.put(player.getUUID(), new Request(dimension, server.getTickCount()));
+        REQUESTS.put(player.getUUID(), new Request(dimension, server.getTickCount(), heatmap));
     }
 
     @SubscribeEvent
@@ -168,6 +169,12 @@ public final class StressServerEvents {
             if (sent == null || sent.hash() != snapshot.topologyHash() || sent.dimension() != dimension) {
                 sendTopology(player, snapshot);
                 SENT.put(viewer, new SentState(dimension, snapshot.topologyHash()));
+            }
+
+            if (request.heatmap()) {
+                StressTracker.Heatmap heat = tracker.heatmap();
+                PacketDistributor.sendToPlayer(player, new S2CStressHeat(dimension,
+                    StressConfig.heatCellSize(), heat.maxStress(), heat.hash(), heat.cells()));
             }
         }
     }
@@ -241,6 +248,20 @@ public final class StressServerEvents {
 
         root.then(Commands.literal("stats").executes(context -> {
             context.getSource().sendSuccess(() -> describe(context.getSource().getServer()), false);
+            return 1;
+        }));
+
+        root.then(Commands.literal("heat").executes(context -> {
+            ServerLevel level = context.getSource().getLevel();
+            StressTracker tracker = TRACKERS.get(level.dimension());
+            if (tracker == null) {
+                context.getSource().sendSuccess(() -> Component.literal("No stress data for this dimension"), false);
+                return 0;
+            }
+            StressTracker.Heatmap heat = tracker.heatmap();
+            context.getSource().sendSuccess(() -> Component.literal(
+                "Heatmap: " + heat.cells().size() + " cells, max " + Math.round(heat.maxStress())
+                    + " SU, cell size " + StressConfig.heatCellSize()), false);
             return 1;
         }));
 

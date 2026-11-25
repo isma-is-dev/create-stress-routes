@@ -3,9 +3,11 @@ package dev.ismadev.stressroutes.server;
 import com.simibubi.create.content.kinetics.KineticNetwork;
 import com.simibubi.create.content.kinetics.RotationPropagator;
 import com.simibubi.create.content.kinetics.base.KineticBlockEntity;
+import com.simibubi.create.content.kinetics.belt.BeltBlockEntity;
 import dev.ismadev.stressroutes.StressConfig;
 import dev.ismadev.stressroutes.StressRoutes;
 import dev.ismadev.stressroutes.data.NodeKind;
+import dev.ismadev.stressroutes.data.StressCell;
 import dev.ismadev.stressroutes.data.StressEdge;
 import dev.ismadev.stressroutes.data.StressNode;
 import dev.ismadev.stressroutes.data.StressSnapshot;
@@ -49,6 +51,10 @@ public final class StressTracker {
 
     private StressSnapshot cachedSnapshot;
     private long cachedTick = Long.MIN_VALUE;
+    private List<StressCell> cachedHeat;
+    private long cachedHeatTick = Long.MIN_VALUE;
+    private float cachedHeatMax;
+    private int cachedHeatHash;
     private boolean seeded;
     private int ambientTicks;
 
@@ -202,7 +208,7 @@ public final class StressTracker {
                 positions.remove(pos);
                 continue;
             }
-            if (!(be instanceof KineticBlockEntity kinetic)) {
+            if (!(be instanceof KineticBlockEntity kinetic) || be instanceof BeltBlockEntity) {
                 positions.remove(pos);
                 continue;
             }
@@ -210,16 +216,20 @@ public final class StressTracker {
                 continue;
             }
 
-            Long networkId = kinetic.network;
-            if (networkId != null) {
-                networks.add(networkId);
+            // Markers are only drawn for the drivetrain (shafts, cogs, gearboxes). Machines
+            // still contribute edges, so the network reaches them, but they are not marked:
+            // a factory has far too many of them for the map to stay readable.
+            if (isTransmission(kinetic)) {
+                Long networkId = kinetic.network;
+                if (networkId != null) {
+                    networks.add(networkId);
+                }
+                float[] stats = statsByNetwork.computeIfAbsent(
+                    networkId == null ? Long.MIN_VALUE : networkId,
+                    key -> networkStats(kinetic));
+                nodes.add(new StressNode(pos, 0.5F, 0.5F, 0.5F, NodeKind.TRANSMISSION,
+                    kinetic.getBlockState().getBlock().getDescriptionId(), stats[0], stats[1]));
             }
-            float[] stats = statsByNetwork.computeIfAbsent(
-                networkId == null ? Long.MIN_VALUE : networkId,
-                key -> networkStats(kinetic));
-
-            nodes.add(new StressNode(pos, 0.5F, 0.5F, 0.5F, kindOf(kinetic, stats),
-                kinetic.getBlockState().getBlock().getDescriptionId(), stats[0], stats[1]));
 
             for (Direction direction : POSITIVE_DIRECTIONS) {
                 BlockPos neighbourPos = pos.relative(direction);
@@ -227,6 +237,7 @@ public final class StressTracker {
                     continue;
                 }
                 if (level.getBlockEntity(neighbourPos) instanceof KineticBlockEntity other
+                    && !(other instanceof BeltBlockEntity)
                     && isConnected(kinetic, other)) {
                     edges.add(new StressEdge(pos, neighbourPos,
                         0.5F, 0.5F, 0.5F, 0.5F, 0.5F, 0.5F));
@@ -243,6 +254,76 @@ public final class StressTracker {
         return snapshot;
     }
 
+    /** Aggregated consumption per cell; only computed when a viewer asks for it. */
+    public Heatmap heatmap() {
+        long tick = level.getServer() == null ? level.getGameTime() : level.getServer().getTickCount();
+        if (cachedHeat != null && cachedHeatTick == tick) {
+            return new Heatmap(cachedHeat, cachedHeatMax, cachedHeatHash);
+        }
+
+        int size = StressConfig.heatCellSize();
+        int maxCells = StressConfig.heatMaxCells();
+        Map<Long, float[]> aggregated = new HashMap<>();
+
+        for (BlockPos pos : positions) {
+            if (!level.isLoaded(pos)) {
+                continue;
+            }
+            if (!(level.getBlockEntity(pos) instanceof KineticBlockEntity kinetic)
+                || kinetic instanceof BeltBlockEntity) {
+                continue;
+            }
+            float impact;
+            try {
+                impact = kinetic.calculateStressApplied();
+            } catch (Throwable t) {
+                continue;
+            }
+            if (impact <= 0.0F) {
+                continue;
+            }
+            int cellX = Math.floorDiv(pos.getX(), size);
+            int cellZ = Math.floorDiv(pos.getZ(), size);
+            long key = ((long) cellX << 32) ^ (cellZ & 0xFFFFFFFFL);
+            float[] cell = aggregated.computeIfAbsent(key, ignored -> new float[2]);
+            cell[0] += impact;
+            cell[1] += 1.0F;
+        }
+
+        List<StressCell> cells = new ArrayList<>(aggregated.size());
+        for (Map.Entry<Long, float[]> entry : aggregated.entrySet()) {
+            long key = entry.getKey();
+            float[] value = entry.getValue();
+            cells.add(new StressCell((int) (key >> 32), (int) key, value[0], (int) value[1]));
+        }
+        cells.sort(Comparator.comparingInt(StressCell::cellX).thenComparingInt(StressCell::cellZ));
+        if (cells.size() > maxCells) {
+            cells = new ArrayList<>(cells.subList(0, maxCells));
+        }
+
+        float max = 0.0F;
+        for (StressCell cell : cells) {
+            max = Math.max(max, cell.stress());
+        }
+
+        // Quantised hash: the client only rebuilds the heat texture when the distribution
+        // changes by roughly 1% of the busiest cell.
+        int hash = 1;
+        for (StressCell cell : cells) {
+            int quantised = max <= 0.0F ? 0 : Math.round(cell.stress() / max * 100.0F);
+            hash ^= (cell.cellX() * 31 + cell.cellZ()) * 17 + quantised;
+        }
+
+        cachedHeat = List.copyOf(cells);
+        cachedHeatTick = tick;
+        cachedHeatMax = max;
+        cachedHeatHash = hash;
+        return new Heatmap(cachedHeat, cachedHeatMax, cachedHeatHash);
+    }
+
+    public record Heatmap(List<StressCell> cells, float maxStress, int hash) {
+    }
+
     private float[] networkStats(KineticBlockEntity be) {
         try {
             if (!be.hasNetwork()) {
@@ -255,21 +336,12 @@ public final class StressTracker {
         }
     }
 
-    private static int kindOf(KineticBlockEntity be, float[] stats) {
-        if (stats[1] > 0.0F && stats[0] > stats[1]) {
-            return NodeKind.OVERSTRESSED;
-        }
+    private static boolean isTransmission(KineticBlockEntity be) {
         try {
-            if (be.calculateAddedStressCapacity() > 0.0F) {
-                return NodeKind.SOURCE;
-            }
-            if (be.calculateStressApplied() > 0.0F) {
-                return NodeKind.CONSUMER;
-            }
-        } catch (Throwable ignored) {
-            // Fall through to transmission.
+            return be.calculateAddedStressCapacity() <= 0.0F && be.calculateStressApplied() <= 0.0F;
+        } catch (Throwable t) {
+            return false;
         }
-        return NodeKind.TRANSMISSION;
     }
 
     private static boolean isConnected(KineticBlockEntity from, KineticBlockEntity to) {

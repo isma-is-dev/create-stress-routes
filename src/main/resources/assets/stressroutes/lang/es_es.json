@@ -5,6 +5,12 @@
   "stressroutes.widget.off": "Capa desactivada",
   "stressroutes.widget.hint": "Clic para activar/desactivar",
 
+  "stressroutes.widget.heat": "Calor",
+  "stressroutes.widget.heat_title": "Mapa de calor de estrés",
+  "stressroutes.widget.heat_on": "Mapa de calor activado",
+  "stressroutes.widget.heat_off": "Mostrando la red",
+  "stressroutes.widget.heat_hint": "Clic para cambiar de vista",
+
   "stressroutes.node.source": "Fuente de estrés",
   "stressroutes.node.consumer": "Consumidor de estrés",
   "stressroutes.node.transmission": "Transmisión",
@@ -12,6 +18,8 @@
 
   "stressroutes.tooltip.network": "Red: %s / %s SU (%s%%)",
   "stressroutes.tooltip.no_network": "Sin red cinética activa",
+  "stressroutes.tooltip.heat_title": "Mapa de calor de estrés (%sx%s bloques)",
+  "stressroutes.tooltip.heat_cell": "%s SU consumidos por %s máquina(s)",
 
   "stressroutes.command.stats.header": "Rutas de Estrés — %s bloques cinéticos indexados, %s espectador(es) del mapa",
   "stressroutes.command.stats.dimension": "%s: %s bloques, %s enlaces, %s nodos, %s red(es)",

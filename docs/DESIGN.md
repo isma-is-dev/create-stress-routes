@@ -48,6 +48,15 @@ so the graph stays half of the naive size.
 * `geometryHash` excludes stress entirely. Only this one invalidates the rasterised map
   textures, so an oscillating factory does not rebuild its tiles constantly.
 
+## Heatmap
+
+The heatmap is a second, opt-in view. Instead of per-block data it aggregates the stress
+impact of consumers into cells (8x8 blocks by default) and sends `StressCell(cellX, cellZ,
+stress, machines)`. It is computed only while a viewer asks for it (`/stressroutes heat`
+prints the same summary), cached per tick, and the client rebuilds its texture only when a
+cell changes by about 1% of the busiest cell. That keeps a 500-machine factory at a few
+hundred cells instead of thousands of entries.
+
 ## Rendering
 
 The transform copies Xaero's own camera maths (`scale = mapScale / Window#getGuiScale()`),

@@ -53,7 +53,7 @@ public final class StressClientEvents {
             dimension = mc.level.dimension();
         }
         try {
-            PacketDistributor.sendToServer(new C2SRequestStress(dimension));
+            PacketDistributor.sendToServer(new C2SRequestStress(dimension, StressConfig.heatmapEnabled()));
         } catch (Throwable t) {
             // A server without the mod cannot handle our channel. Stop trying so the log
             // does not fill up once per second.
@@ -71,7 +71,8 @@ public final class StressClientEvents {
         if (!isWorldMapScreen(event.getScreen())) {
             return;
         }
-        if (StressMapWidget.mouseClicked(event.getMouseX(), event.getMouseY(), event.getButton())) {
+        if (StressMapWidget.heatClicked(event.getMouseX(), event.getMouseY(), event.getButton())
+            || StressMapWidget.mouseClicked(event.getMouseX(), event.getMouseY(), event.getButton())) {
             event.setCanceled(true);
         }
     }

@@ -13,10 +13,11 @@ import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
- * Client -&gt; server heartbeat sent while the world map is open. It carries the
- * dimension currently being viewed, so the server only streams relevant data.
+ * Client -&gt; server heartbeat while the world map is open. It carries the viewed dimension
+ * and whether the heatmap view is enabled, so the server only aggregates cells when asked.
  */
-public record C2SRequestStress(ResourceKey<Level> dimension) implements CustomPacketPayload {
+public record C2SRequestStress(ResourceKey<Level> dimension, boolean heatmap)
+    implements CustomPacketPayload {
 
     public static final Type<C2SRequestStress> TYPE =
         new Type<>(ResourceLocation.fromNamespaceAndPath(StressRoutes.MODID, "request"));
@@ -24,6 +25,7 @@ public record C2SRequestStress(ResourceKey<Level> dimension) implements CustomPa
     public static final StreamCodec<RegistryFriendlyByteBuf, C2SRequestStress> STREAM_CODEC =
         StreamCodec.composite(
             ResourceKey.streamCodec(Registries.DIMENSION), C2SRequestStress::dimension,
+            net.minecraft.network.codec.ByteBufCodecs.BOOL, C2SRequestStress::heatmap,
             C2SRequestStress::new);
 
     @Override
@@ -33,7 +35,7 @@ public record C2SRequestStress(ResourceKey<Level> dimension) implements CustomPa
 
     public static void handle(C2SRequestStress payload, IPayloadContext context) {
         if (context.player() instanceof ServerPlayer player) {
-            StressServerEvents.onRequest(player, payload.dimension());
+            StressServerEvents.onRequest(player, payload.dimension(), payload.heatmap());
         }
     }
 }

@@ -50,6 +50,22 @@ public final class StressConfig {
         }
     }
 
+    public static boolean heatmapEnabled() {
+        return safe(CLIENT.heatmapEnabled, false);
+    }
+
+    public static int heatmapOpacity() {
+        return Math.max(0, Math.min(100, safe(CLIENT.heatmapOpacity, 60)));
+    }
+
+    public static int heatCellSize() {
+        return Math.max(2, safe(SERVER.heatCellSize, 8));
+    }
+
+    public static int heatMaxCells() {
+        return Math.max(64, safe(SERVER.heatMaxCells, 8192));
+    }
+
     public static boolean overlayEnabled() {
         return safe(CLIENT.enabled, true);
     }
@@ -104,6 +120,8 @@ public final class StressConfig {
         public final ModConfigSpec.IntValue routeOpacity;
         public final ModConfigSpec.IntValue maxMapSections;
         public final ModConfigSpec.IntValue widgetY;
+        public final ModConfigSpec.BooleanValue heatmapEnabled;
+        public final ModConfigSpec.IntValue heatmapOpacity;
 
         Client(ModConfigSpec.Builder builder) {
             builder.comment("Visual settings for the stress overlay on Xaero's World Map.").push("visuals");
@@ -142,6 +160,14 @@ public final class StressConfig {
                     "Postal Routes uses 48 and Fluid Routes 80, so 64 keeps the three stacked.")
                 .defineInRange("widgetY", 64, 0, 400);
 
+            this.heatmapEnabled = builder
+                .comment("Show the stress heatmap instead of the network. Toggled by the Heat button.")
+                .define("heatmap.enabled", false);
+
+            this.heatmapOpacity = builder
+                .comment("Opacity of the heatmap cells, 0-100.")
+                .defineInRange("heatmap.opacity", 60, 0, 100);
+
             builder.pop();
         }
     }
@@ -151,6 +177,8 @@ public final class StressConfig {
         public final ModConfigSpec.IntValue syncIntervalTicks;
         public final ModConfigSpec.IntValue maxNodes;
         public final ModConfigSpec.IntValue maxDirtyChunksPerTick;
+        public final ModConfigSpec.IntValue heatCellSize;
+        public final ModConfigSpec.IntValue heatMaxCells;
 
         Server(ModConfigSpec.Builder builder) {
             builder.comment("Server side scan limits for the stress overlay.").push("scan");
@@ -167,6 +195,14 @@ public final class StressConfig {
             this.maxDirtyChunksPerTick = builder
                 .comment("Chunks rescanned per tick after a block placement or removal.")
                 .defineInRange("maxDirtyChunksPerTick", 4, 1, 32);
+
+            this.heatCellSize = builder
+                .comment("Heatmap cell size in blocks. 8 means one cell per 8x8 area.")
+                .defineInRange("heatmap.cellSize", 8, 2, 64);
+
+            this.heatMaxCells = builder
+                .comment("Maximum heatmap cells sent to a viewer.")
+                .defineInRange("heatmap.maxCells", 8192, 64, 65536);
 
             builder.pop();
         }

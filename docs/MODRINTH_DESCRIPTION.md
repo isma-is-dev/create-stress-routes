@@ -15,7 +15,10 @@ onto the map: every shaft, cog, gearbox, motor and machine as one continuous gre
   cased shafts, cog meshing and chain drives included.
 - **Node markers**: bright green sources, yellow-green consumers, dim green transmission,
   red when overstressed.
-- **Live stress**: hover a block for the network's used / capacity SU and load percentage.
+- **Live stress**: hover a drivetrain block for the network's used / capacity SU and load
+  percentage.
+- **Stress heatmap**: a separate Heat button paints an aggregated consumption map (green →
+  red) so stressed zones stand out without rendering every machine.
 - **On-map toggle** with a live network counter.
 - **No blocks, no items, no worldgen** — a viewer you can add and remove freely.
 

@@ -5,6 +5,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import dev.ismadev.stressroutes.StressConfig;
 import dev.ismadev.stressroutes.StressRoutes;
 import dev.ismadev.stressroutes.data.NodeKind;
+import dev.ismadev.stressroutes.data.StressCell;
 import dev.ismadev.stressroutes.data.StressNode;
 import dev.ismadev.stressroutes.mixin.GuiMapAccessor;
 import net.minecraft.ChatFormatting;
@@ -60,6 +61,7 @@ public final class StressMapOverlay {
             StressClientState.DimData data = StressClientState.getIfPresent(dimension);
             int networks = data == null ? 0 : data.networkCount;
             StressMapWidget.render(graphics, mouseX, mouseY, networks);
+            StressMapWidget.renderHeat(graphics, mouseX, mouseY);
 
             if (!StressMapWidget.isEnabled()) {
                 return;
@@ -101,25 +103,29 @@ public final class StressMapOverlay {
 
             int opacity = Mth.clamp(StressConfig.routeOpacity(), 0, 100);
             float alpha = opacity / 100.0F;
+            boolean heatmap = StressConfig.heatmapEnabled() && !data.cells.isEmpty();
 
             StressTextureCache.INSTANCE.ensure(dimension, data, factor,
-                StressConfig.showRoutes(), StressConfig.showNodes(), StressConfig.lineTheme());
-            StressTextureCache.INSTANCE.render(graphics, bounds, alpha);
+                StressConfig.showRoutes(), StressConfig.showNodes(), StressConfig.lineTheme(), heatmap);
+            StressTextureCache.INSTANCE.render(graphics, bounds, heatmap ? 1.0F : alpha);
 
             RenderSystem.enableBlend();
             StressNode hovered = null;
-            if (StressConfig.showNodes()) {
+            StressCell hoveredCell = null;
+            if (heatmap) {
+                hoveredCell = cellAt(data, mouseMapX * factor, mouseMapZ * factor);
+            } else if (StressConfig.showNodes()) {
                 hovered = drawNodes(graphics, data, factor, scale, bounds, mouseMapX, mouseMapZ);
             }
 
             pose.popPose();
             graphics.flush();
 
-            if (hovered != null) {
-                List<Component> tooltip = tooltipFor(hovered);
-                if (!tooltip.isEmpty()) {
-                    graphics.renderComponentTooltip(mc.font, tooltip, mouseX, mouseY);
-                }
+            List<Component> tooltip = hoveredCell != null
+                ? heatTooltip(hoveredCell, data.cellSize)
+                : (hovered != null ? tooltipFor(hovered) : List.of());
+            if (!tooltip.isEmpty()) {
+                graphics.renderComponentTooltip(mc.font, tooltip, mouseX, mouseY);
             }
         } catch (Throwable t) {
             failed = true;
@@ -175,11 +181,29 @@ public final class StressMapOverlay {
         return hovered;
     }
 
+    @Nullable
+    private static StressCell cellAt(StressClientState.DimData data, double blockX, double blockZ) {
+        if (data.cellSize <= 0) {
+            return null;
+        }
+        int cellX = (int) Math.floor(blockX / data.cellSize);
+        int cellZ = (int) Math.floor(blockZ / data.cellSize);
+        return data.cellIndex.get(StressClientState.cellKey(cellX, cellZ));
+    }
+
+    private static List<Component> heatTooltip(StressCell cell, int cellSize) {
+        List<Component> lines = new ArrayList<>(3);
+        lines.add(Component.translatable("stressroutes.tooltip.heat_title", cellSize)
+            .withStyle(ChatFormatting.GOLD));
+        lines.add(Component.translatable("stressroutes.tooltip.heat_cell",
+                Math.round(cell.stress()), cell.machines())
+            .withStyle(ChatFormatting.YELLOW));
+        return lines;
+    }
+
     private static List<Component> tooltipFor(StressNode node) {
         List<Component> lines = new ArrayList<>(4);
         lines.add(Component.translatable(node.label()).withStyle(ChatFormatting.WHITE));
-        lines.add(Component.translatable(NodeKind.translationKey(node.kind())).withStyle(kindColor(node.kind())));
-
         if (node.capacity() > 0.0F) {
             int percent = Math.round(node.load() * 100.0F);
             lines.add(Component.translatable("stressroutes.tooltip.network",
@@ -192,12 +216,5 @@ public final class StressMapOverlay {
         return lines;
     }
 
-    private static ChatFormatting kindColor(int kind) {
-        return switch (kind) {
-            case NodeKind.SOURCE -> ChatFormatting.GREEN;
-            case NodeKind.CONSUMER -> ChatFormatting.YELLOW;
-            case NodeKind.OVERSTRESSED -> ChatFormatting.RED;
-            default -> ChatFormatting.GRAY;
-        };
-    }
+
 }

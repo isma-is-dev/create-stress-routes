@@ -1,7 +1,9 @@
 package dev.ismadev.stressroutes.client;
 
+import dev.ismadev.stressroutes.data.StressCell;
 import dev.ismadev.stressroutes.data.StressEdge;
 import dev.ismadev.stressroutes.data.StressNode;
+import dev.ismadev.stressroutes.net.S2CStressHeat;
 import dev.ismadev.stressroutes.net.S2CTopologyPart;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
@@ -63,6 +65,22 @@ public final class StressClientState {
         }
     }
 
+    public static void acceptHeat(S2CStressHeat packet) {
+        DimData data = get(packet.dimension());
+        data.cells = List.copyOf(packet.cells());
+        data.cellSize = Math.max(1, packet.cellSize());
+        data.maxStress = packet.maxStress();
+        data.heatHash = packet.heatHash();
+        data.cellIndex.clear();
+        for (StressCell cell : data.cells) {
+            data.cellIndex.put(cellKey(cell.cellX(), cell.cellZ()), cell);
+        }
+    }
+
+    public static long cellKey(int x, int z) {
+        return ((long) x << 32) ^ (z & 0xFFFFFFFFL);
+    }
+
     public static final class PendingTopology {
         final int requestId;
         final int parts;
@@ -81,6 +99,11 @@ public final class StressClientState {
         public List<StressEdge> edges = List.of();
         public List<StressNode> nodes = List.of();
         public int networkCount;
+        public List<StressCell> cells = List.of();
+        public final Map<Long, StressCell> cellIndex = new HashMap<>();
+        public int cellSize = 8;
+        public float maxStress;
+        public int heatHash;
 
         public boolean isEmpty() {
             return edges.isEmpty() && nodes.isEmpty();

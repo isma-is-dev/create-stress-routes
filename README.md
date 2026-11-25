@@ -19,8 +19,11 @@ the server and mirrors them onto Xaero's World Map:
   line with a dark outline.
 * **Nodes** — sources (bright green), consumers (yellow-green), pure transmission (dim
   green) and overstressed networks (red).
-* **Live stress** — hover any block for the network's `used / capacity SU` and load
-  percentage.
+* **Live stress** — hover any drivetrain block for the network's `used / capacity SU` and
+  load percentage.
+* **Stress heatmap** — a second **Heat** button switches the overlay to an aggregated
+  consumption map (8×8 block cells, green → red). No per-machine rendering: just the zones
+  that are eating your stress budget. Hover a cell for its SU and machine count.
 * **No blocks, no items, no worldgen.** A pure viewer: safe to add to an existing world and
   safe to remove.
 
@@ -51,10 +54,8 @@ observed.
 | Element | Meaning |
 |---|---|
 | Solid green line, dark outline | Rotation propagates between these two blocks |
-| Bright green marker | Stress source (motor, water wheel, windmill...) |
-| Yellow-green marker | Stress consumer (machines) |
-| Dim green marker | Transmission only (shaft, cog, gearbox) |
-| Red marker | Network is over capacity |
+| Single green pixel | Drivetrain block (shaft, cog, gearbox...) |
+| Heat cell colours | Aggregated stress consumption: green = light, red = heavy |
 
 Tooltips show the block name, its role and the network's stress (`used / capacity SU`).
 
@@ -72,6 +73,8 @@ Tooltips show the block name, its role and the network's stress (`used / capacit
 | `dashedRoutes` | `false` | Solid lines by default |
 | `maxMapSections` | `512` | 128×128 block texture cache limit |
 | `widgetY` | `64` | Button position (Postal uses 48, Fluid 80) |
+| `heatmap.enabled` | `false` | Heatmap view (also the Heat button) |
+| `heatmap.opacity` | `60` | Heatmap opacity, 0-100 |
 
 `config/stressroutes-server.toml`
 
@@ -80,8 +83,10 @@ Tooltips show the block name, its role and the network's stress (`used / capacit
 | `syncIntervalTicks` | `10` | Rebuild rate while a map is open |
 | `maxNodes` | `16384` | Kinetic blocks reported per dimension |
 | `maxDirtyChunksPerTick` | `4` | Chunk rescans per tick after block changes |
+| `heatmap.cellSize` | `8` | Heatmap cell size in blocks |
+| `heatmap.maxCells` | `8192` | Heatmap cells sent per viewer |
 
-Commands: `/stressroutes stats` and `/stressroutes rescan` (permission level 2).
+Commands: `/stressroutes stats`, `/stressroutes rescan` and `/stressroutes heat` (permission level 2).
 
 ## Performance
 

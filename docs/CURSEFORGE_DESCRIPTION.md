@@ -11,7 +11,8 @@ Create's mechanical networks are invisible until something jams. Stress Routes m
 [list]
 [*][b]Network lines[/b] - every connection rotation actually propagates between, drawn as a solid green line with a dark outline.
 [*][b]Nodes[/b] - bright green sources (motors, water wheels), yellow-green consumers (machines), dim green transmission (shafts, cogs, gearboxes) and red when a network is overstressed.
-[*][b]Live stress[/b] - hover any block for the network's used / capacity SU and load percentage.
+[*][b]Live stress[/b] - hover any drivetrain block for the network's used / capacity SU and load percentage.
+[*][b]Stress heatmap[/b] - a separate [b]Heat[/b] button shows an aggregated 8x8-block consumption map (green to red), so you can spot the stressed zones without rendering a single machine.
 [*][b]On-map toggle[/b] - a Stress button with a live network counter.
 [/list]
 
