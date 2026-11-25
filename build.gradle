@@ -1,0 +1,150 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.148'
+}
+
+version = mod_version
+group = mod_group_id
+
+base {
+    archivesName = "${mod_id}-${minecraft_version}"
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+    withSourcesJar()
+}
+
+neoForge {
+    version = neoforge_version
+
+    // In-game dev runs. Create is required by this addon, and Create itself needs a
+    // handful of other mods at runtime, so the practical way to smoke-test is the
+    // `installToInstance` task below (it drops the built jar into a real modpack).
+    runs {
+        client {
+            client()
+            gameDirectory = file('run/client')
+            // Optional: -PquickPlayWorld=WorldName joins a singleplayer save on launch,
+            // which is handy for smoke-testing the overlay without clicking through menus.
+            if (project.hasProperty('quickPlayWorld')) {
+                programArguments.addAll('--quickPlaySingleplayer', project.property('quickPlayWorld'))
+            }
+        }
+        server {
+            server()
+            gameDirectory = file('run/server')
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+repositories {
+    maven {
+        name = 'CreateMod'
+        url = 'https://maven.createmod.net/'
+    }
+    // Xaero's mods are not published to a public maven, so they are taken from
+    // `libs/` (see libs/README.md and tools/fetch-libs.ps1).
+    flatDir {
+        dirs 'libs'
+    }
+}
+
+configurations {
+    xaeroCompile
+}
+
+dependencies {
+    // Create (compile-time API). Transitives are runtime-only in Create's POM and
+    // pull in unrelated mods, so they are skipped on purpose.
+    compileOnly("com.simibubi.create:create-${minecraft_version}:${create_version}") {
+        transitive = false
+    }
+    // Ponder ships Catnip inside it; Create's block entities reference both.
+    compileOnly("net.createmod.ponder:ponder-neoforge:${ponder_version}") {
+        transitive = false
+    }
+
+    // Xaero's World Map / Minimap (optional at runtime, compile-only here).
+    // XaeroLib ships nested inside the world map jar; fetch-libs.ps1 extracts it.
+    compileOnly fileTree(dir: 'libs', include: ['xaeroworldmap*.jar', 'xaerominimap*.jar', 'xaerolib*.jar'])
+    xaeroCompile fileTree(dir: 'libs', include: ['xaeroworldmap*.jar', 'xaerominimap*.jar', 'xaerolib*.jar'])
+
+    // Dev-run convenience: if a real Create jar sits in libs/, the dev server can boot
+    // with Create installed and the addon can be smoke-tested without a modpack.
+    runtimeOnly fileTree(dir: 'libs', include: ['create-*.jar'])
+    // Xaero is client-only; xaerolib ships nested inside both jars and must not be added
+    // twice (jarjar resolves it).
+    runtimeOnly fileTree(dir: 'libs', include: ['xaeroworldmap*.jar', 'xaerominimap*.jar'])
+}
+
+tasks.register('checkLibs') {
+    group = 'verification'
+    description = 'Verifies that the optional Xaero jars are available in libs/.'
+    doLast {
+        def xaero = fileTree(dir: 'libs', include: ['xaeroworldmap*.jar']).files
+        if (xaero.isEmpty()) {
+            throw new GradleException(
+                "Missing Xaero's World Map jar in libs/.\n" +
+                "Run:  powershell -ExecutionPolicy Bypass -File tools/fetch-libs.ps1\n" +
+                "or copy xaeroworldmap-neoforge-1.21.1-*.jar into libs/ manually."
+            )
+        }
+    }
+}
+
+tasks.named('compileJava') {
+    dependsOn 'checkLibs'
+}
+
+processResources {
+    var replaceProperties = [
+        minecraft_version      : minecraft_version,
+        minecraft_version_range: minecraft_version_range,
+        neoforge_version       : neoforge_version,
+        neoforge_version_range : neoforge_version_range,
+        mod_id                 : mod_id,
+        mod_name               : mod_name,
+        mod_version            : mod_version,
+        mod_authors            : 'Ismael Martín García (isma-is-dev)',
+        mod_description        : 'Plots Create\'s kinetic stress network on Xaero\'s World Map: shafts, cogs, gearboxes and machines as a continuous green flow with live SU load.',
+        create_version_range   : create_version_range
+    ]
+    inputs.properties replaceProperties
+
+    filesMatching(['META-INF/neoforge.mods.toml', 'pack.mcmeta']) {
+        expand replaceProperties
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+}
+
+tasks.withType(ProcessResources).configureEach {
+    filteringCharset = 'UTF-8'
+}
+
+jar {
+    manifest {
+        attributes([
+            'Specification-Title'     : mod_name,
+            'Specification-Vendor'    : 'isma-is-dev',
+            'Specification-Version'   : '1',
+            'Implementation-Title'    : mod_name,
+            'Implementation-Version'  : mod_version,
+            'Implementation-Vendor'   : 'isma-is-dev',
+            'Implementation-Timestamp': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ"),
+            'MixinConfigs'            : "${mod_id}.mixins.json"
+        ])
+    }
+}

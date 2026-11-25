@@ -1,0 +1,19 @@
+{
+  "stressroutes.widget.label": "Stress",
+  "stressroutes.widget.title": "Create: Stress Routes",
+  "stressroutes.widget.on": "Overlay enabled",
+  "stressroutes.widget.off": "Overlay disabled",
+  "stressroutes.widget.hint": "Click to toggle",
+
+  "stressroutes.node.source": "Stress source",
+  "stressroutes.node.consumer": "Stress consumer",
+  "stressroutes.node.transmission": "Transmission",
+  "stressroutes.node.overstressed": "Overstressed!",
+
+  "stressroutes.tooltip.network": "Network: %s / %s SU (%s%%)",
+  "stressroutes.tooltip.no_network": "No active kinetic network",
+
+  "stressroutes.command.stats.header": "Stress Routes — %s tracked kinetic blocks, %s map viewer(s)",
+  "stressroutes.command.stats.dimension": "%s: %s blocks, %s links, %s nodes, %s network(s)",
+  "stressroutes.command.rescan": "Stress Routes rescanned %s loaded chunks"
+}

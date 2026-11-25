@@ -1,0 +1,19 @@
+{
+  "stressroutes.widget.label": "Estrés",
+  "stressroutes.widget.title": "Create: Rutas de Estrés",
+  "stressroutes.widget.on": "Capa activada",
+  "stressroutes.widget.off": "Capa desactivada",
+  "stressroutes.widget.hint": "Clic para activar/desactivar",
+
+  "stressroutes.node.source": "Fuente de estrés",
+  "stressroutes.node.consumer": "Consumidor de estrés",
+  "stressroutes.node.transmission": "Transmisión",
+  "stressroutes.node.overstressed": "¡Sobrecargado!",
+
+  "stressroutes.tooltip.network": "Red: %s / %s SU (%s%%)",
+  "stressroutes.tooltip.no_network": "Sin red cinética activa",
+
+  "stressroutes.command.stats.header": "Rutas de Estrés — %s bloques cinéticos indexados, %s espectador(es) del mapa",
+  "stressroutes.command.stats.dimension": "%s: %s bloques, %s enlaces, %s nodos, %s red(es)",
+  "stressroutes.command.rescan": "Rutas de Estrés reindexó %s chunks cargados"
+}
