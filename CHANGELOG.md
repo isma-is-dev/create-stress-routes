@@ -3,6 +3,19 @@
 All notable changes to this project are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: SemVer.
 
+## [1.1.1] - 2026-11-25
+
+### Fixed
+
+- Heatmap values were far too low: cells used the base stress impact instead of Create's
+  actual `impact x |speed|`, so a machine at speed looked almost free. Values now match the
+  network stress shown by the stress gauge.
+- The Heat button could not be turned off: it sat on top of the map area, and GuiMap ate
+  those clicks. All buttons now read raw mouse input and the Heat button moved below the
+  Stress button.
+- Wider buttons: the label and the counter are no longer cramped.
+- Spanish tooltip wording: the heatmap now says "Cada celda cubre 8x8 bloques" instead of
+  the cryptic "(8x8 bloques)".
 ## [1.1.0] - 2026-11-25
 
 ### Added

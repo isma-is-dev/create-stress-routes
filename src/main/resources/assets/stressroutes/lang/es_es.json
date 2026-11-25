@@ -18,8 +18,9 @@
 
   "stressroutes.tooltip.network": "Red: %s / %s SU (%s%%)",
   "stressroutes.tooltip.no_network": "Sin red cinética activa",
-  "stressroutes.tooltip.heat_title": "Mapa de calor de estrés (%sx%s bloques)",
+  "stressroutes.tooltip.heat_title": "Mapa de calor de estrés",
   "stressroutes.tooltip.heat_cell": "%s SU consumidos por %s máquina(s)",
+  "stressroutes.tooltip.heat_area": "Cada celda cubre %s×%s bloques",
 
   "stressroutes.command.stats.header": "Rutas de Estrés — %s bloques cinéticos indexados, %s espectador(es) del mapa",
   "stressroutes.command.stats.dimension": "%s: %s bloques, %s enlaces, %s nodos, %s red(es)",

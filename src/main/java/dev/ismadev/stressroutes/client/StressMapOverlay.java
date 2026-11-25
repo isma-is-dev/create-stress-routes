@@ -193,11 +193,13 @@ public final class StressMapOverlay {
 
     private static List<Component> heatTooltip(StressCell cell, int cellSize) {
         List<Component> lines = new ArrayList<>(3);
-        lines.add(Component.translatable("stressroutes.tooltip.heat_title", cellSize)
+        lines.add(Component.translatable("stressroutes.tooltip.heat_title")
             .withStyle(ChatFormatting.GOLD));
         lines.add(Component.translatable("stressroutes.tooltip.heat_cell",
                 Math.round(cell.stress()), cell.machines())
             .withStyle(ChatFormatting.YELLOW));
+        lines.add(Component.translatable("stressroutes.tooltip.heat_area", cellSize, cellSize)
+            .withStyle(ChatFormatting.DARK_GRAY));
         return lines;
     }
 

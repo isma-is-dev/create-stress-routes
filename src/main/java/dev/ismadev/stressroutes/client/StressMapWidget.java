@@ -18,10 +18,11 @@ import java.util.List;
 public final class StressMapWidget {
 
     public static final int X = 3;
-    public static final int WIDTH = 58;
+    public static final int WIDTH = 66;
     public static final int HEIGHT = 14;
-    public static final int HEAT_X = X + WIDTH + 2;
-    public static final int HEAT_WIDTH = 40;
+    public static final int HEAT_X = X;
+    public static final int HEAT_WIDTH = WIDTH;
+    public static final int HEAT_GAP = 2;
 
     private static final int BACKGROUND_ON = 0xE01C1408;
     private static final int BACKGROUND_OFF = 0xE0181818;
@@ -81,7 +82,7 @@ public final class StressMapWidget {
         Minecraft mc = Minecraft.getInstance();
         Font font = mc.font;
         boolean heat = StressConfig.heatmapEnabled();
-        int y = y();
+        int y = y() + HEIGHT + HEAT_GAP;
         boolean hovered = isHeatHovered(mouseX, mouseY);
 
         int background = heat ? 0xE02A1406 : 0xE0181818;
@@ -110,7 +111,7 @@ public final class StressMapWidget {
     }
 
     public static boolean isHeatHovered(double mouseX, double mouseY) {
-        int y = y();
+        int y = y() + HEIGHT + HEAT_GAP;
         return mouseX >= HEAT_X && mouseX < HEAT_X + HEAT_WIDTH && mouseY >= y && mouseY < y + HEIGHT;
     }
 

@@ -3,6 +3,7 @@ package dev.ismadev.stressroutes.client;
 import dev.ismadev.stressroutes.StressConfig;
 import dev.ismadev.stressroutes.StressRoutes;
 import dev.ismadev.stressroutes.net.C2SRequestStress;
+import com.mojang.blaze3d.platform.Window;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
@@ -11,7 +12,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.client.event.ScreenEvent;
+import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
@@ -64,15 +65,24 @@ public final class StressClientEvents {
     }
 
     @SubscribeEvent
-    public static void onMouseClick(ScreenEvent.MouseButtonPressed.Pre event) {
-        if (event.getButton() != 0) {
+    public static void onMouseButton(InputEvent.MouseButton.Pre event) {
+        if (event.getAction() != 1 || event.getButton() != 0) {
             return;
         }
-        if (!isWorldMapScreen(event.getScreen())) {
+        Minecraft mc = Minecraft.getInstance();
+        if (!isWorldMapOpen(mc)) {
             return;
         }
-        if (StressMapWidget.heatClicked(event.getMouseX(), event.getMouseY(), event.getButton())
-            || StressMapWidget.mouseClicked(event.getMouseX(), event.getMouseY(), event.getButton())) {
+        Window window = mc.getWindow();
+        if (window.getScreenWidth() <= 0 || window.getScreenHeight() <= 0) {
+            return;
+        }
+        // Raw input fires before GuiMap handles the click, which is what makes buttons that
+        // overlap the map area clickable (the map would otherwise eat the event).
+        double mouseX = mc.mouseHandler.xpos() * (double) window.getGuiScaledWidth() / (double) window.getScreenWidth();
+        double mouseY = mc.mouseHandler.ypos() * (double) window.getGuiScaledHeight() / (double) window.getScreenHeight();
+        if (StressMapWidget.heatClicked(mouseX, mouseY, event.getButton())
+            || StressMapWidget.mouseClicked(mouseX, mouseY, event.getButton())) {
             event.setCanceled(true);
         }
     }

@@ -18,8 +18,9 @@
 
   "stressroutes.tooltip.network": "Network: %s / %s SU (%s%%)",
   "stressroutes.tooltip.no_network": "No active kinetic network",
-  "stressroutes.tooltip.heat_title": "Stress heatmap (%sx%s blocks)",
+  "stressroutes.tooltip.heat_title": "Stress heatmap",
   "stressroutes.tooltip.heat_cell": "%s SU consumed by %s machine(s)",
+  "stressroutes.tooltip.heat_area": "Each cell covers %sx%s blocks",
 
   "stressroutes.command.stats.header": "Stress Routes — %s tracked kinetic blocks, %s map viewer(s)",
   "stressroutes.command.stats.dimension": "%s: %s blocks, %s links, %s nodes, %s network(s)",

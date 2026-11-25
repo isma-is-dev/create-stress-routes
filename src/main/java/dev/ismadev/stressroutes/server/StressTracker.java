@@ -275,7 +275,9 @@ public final class StressTracker {
             }
             float impact;
             try {
-                impact = kinetic.calculateStressApplied();
+                // Create's network stress is base impact x |speed|; using the raw impact
+                // made busy machines look far cheaper than they are.
+                impact = kinetic.calculateStressApplied() * Math.abs(kinetic.getTheoreticalSpeed());
             } catch (Throwable t) {
                 continue;
             }
